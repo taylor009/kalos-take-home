@@ -3,6 +3,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { v4 as uuidv4 } from "uuid";
+import { Server as SocketIOServer } from "socket.io";
+import { createServer } from "http";
 import type {
   Transaction,
   Analytics,
@@ -10,6 +12,7 @@ import type {
   GetTransactionsResponse,
   GetAnalyticsResponse,
   ApiError,
+  WebSocketEvents,
 } from "@shared";
 
 const app = new Hono();
@@ -93,6 +96,67 @@ class DataStore {
 
 // Initialize data store
 const dataStore = new DataStore();
+
+// Create HTTP server for Socket.IO integration
+const server = createServer();
+
+// Create Socket.IO server
+const io = new SocketIOServer<WebSocketEvents>(server, {
+  cors: {
+    origin: ["http://localhost:3000"],
+    credentials: true,
+  },
+});
+
+// WebSocket broadcasting functions
+function broadcastNewTransaction(transaction: Transaction) {
+  console.log(
+    `📡 Broadcasting new transaction: ${transaction.customerName} - $${transaction.amount}`
+  );
+  io.emit("server:transaction-added", transaction);
+}
+
+function broadcastAnalyticsUpdate(analytics: Analytics) {
+  console.log(
+    `📊 Broadcasting analytics update: $${analytics.totalRevenue} total revenue`
+  );
+  io.emit("server:analytics-updated", analytics);
+}
+
+// WebSocket connection handling
+io.on("connection", (socket) => {
+  console.log(`🔌 Client connected: ${socket.id}`);
+
+  // Send welcome message
+  socket.emit("server:connected", {
+    message: "Connected to Kalos Sales Dashboard",
+  });
+
+  // Handle client join
+  socket.on("client:join", () => {
+    console.log(`👋 Client ${socket.id} joined`);
+  });
+
+  // Handle client leave
+  socket.on("client:leave", () => {
+    console.log(`👋 Client ${socket.id} left`);
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", (reason) => {
+    console.log(`🔌 Client disconnected: ${socket.id}, reason: ${reason}`);
+  });
+
+  // Send error messages if needed
+  socket.on("error", (error) => {
+    console.error(`❌ Socket error for ${socket.id}:`, error);
+    socket.emit("server:error", {
+      error: "SOCKET_ERROR",
+      message: "WebSocket error occurred",
+      statusCode: 500,
+    });
+  });
+});
 
 // Middleware
 app.use("*", logger());
@@ -187,7 +251,7 @@ app.get("/api/transactions", (c) => {
   }
 });
 
-// POST /api/transactions - Create new transaction with validation
+// POST /api/transactions - Create new transaction with validation and broadcasting
 app.post("/api/transactions", async (c) => {
   try {
     const body = await c.req.json();
@@ -203,6 +267,12 @@ app.post("/api/transactions", async (c) => {
     }
 
     const transaction = dataStore.createTransaction(validatedData);
+
+    // Broadcast new transaction and updated analytics
+    broadcastNewTransaction(transaction);
+
+    const analytics = dataStore.calculateAnalytics();
+    broadcastAnalyticsUpdate(analytics);
 
     return c.json(transaction, 201);
   } catch (error) {
@@ -270,16 +340,77 @@ app.onError((err, c) => {
 
 const port = 3001;
 
-console.log(`🚀 Server is running on port ${port}`);
-console.log(`📊 Kalos Sales Dashboard API`);
-console.log(`🌐 http://localhost:${port}`);
-console.log(`\n📋 Available endpoints:`);
-console.log(`  GET    /api/health      - Health check`);
-console.log(`  GET    /api/transactions - Get all transactions`);
-console.log(`  POST   /api/transactions - Create new transaction`);
-console.log(`  GET    /api/analytics   - Get analytics summary`);
+// Create Hono server handler function
+const requestHandler = async (req: Request): Promise<Response> => {
+  return app.fetch(req);
+};
 
-serve({
-  fetch: app.fetch,
-  port,
+// Handle HTTP requests that are not WebSocket upgrades
+server.on("request", async (req, res) => {
+  try {
+    // Convert Node.js request to Web API Request
+    const url = `http://${req.headers.host}${req.url}`;
+    const method = req.method || "GET";
+
+    // Handle request body for POST requests
+    let body: BodyInit | undefined;
+    if (method !== "GET" && method !== "HEAD") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      body = Buffer.concat(chunks);
+    }
+
+    // Create Web API Request object
+    const webRequest = new Request(url, {
+      method,
+      headers: req.headers as HeadersInit,
+      body,
+    });
+
+    // Process with Hono
+    const response = await requestHandler(webRequest);
+
+    // Convert Web API Response back to Node.js response
+    res.statusCode = response.status;
+
+    // Set response headers
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+
+    // Send response body
+    if (response.body) {
+      const reader = response.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+    }
+
+    res.end();
+  } catch (error) {
+    console.error("Server error:", error);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "Internal server error" }));
+  }
+});
+
+// Start the server
+server.listen(port, () => {
+  console.log(`🚀 Server is running on port ${port}`);
+  console.log(`📊 Kalos Sales Dashboard API`);
+  console.log(`🌐 HTTP: http://localhost:${port}`);
+  console.log(`🔌 WebSocket: ws://localhost:${port}`);
+  console.log(`\n📋 Available endpoints:`);
+  console.log(`  GET    /api/health      - Health check`);
+  console.log(`  GET    /api/transactions - Get all transactions`);
+  console.log(`  POST   /api/transactions - Create new transaction`);
+  console.log(`  GET    /api/analytics   - Get analytics summary`);
+  console.log(`\n⚡ Real-time features:`);
+  console.log(`  📡 WebSocket events: transaction-added, analytics-updated`);
+  console.log(`  🔄 Live updates on transaction creation`);
 });
