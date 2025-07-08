@@ -156,8 +156,8 @@ export default function DashboardPage() {
                   <h3 className="text-base font-medium text-red-800 mb-2">
                     Analytics Unavailable
                   </h3>
-                  <p className="text-sm text-red-700 mb-4">
-                    We're having trouble loading your analytics data right now.
+                                    <p className="text-sm text-red-700 mb-4">
+                    We&apos;re having trouble loading your analytics data right now. 
                     This could be due to a network issue or server maintenance.
                   </p>
                   <button
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                     Transactions Unavailable
                   </h3>
                   <p className="text-sm text-red-700 mb-4">
-                    We can't load your transaction data at the moment. Please
+                    We can&apos;t load your transaction data at the moment. Please
                     check your connection and try again.
                   </p>
                   <button

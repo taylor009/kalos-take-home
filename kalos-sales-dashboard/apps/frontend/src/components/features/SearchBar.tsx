@@ -156,7 +156,7 @@ export function SearchBar({
         <div className="mt-2 text-xs text-gray-600">
           {filteredCount === 0 ? (
             <span className="text-amber-600">
-              No transactions found for "{query}"
+              No transactions found for &quot;{query}&quot;
             </span>
           ) : filteredCount === totalCount ? (
             <span className="text-green-600">
@@ -164,8 +164,8 @@ export function SearchBar({
             </span>
           ) : (
             <span>
-              Found {filteredCount} of {totalCount} transactions matching "
-              {query}"
+              Found {filteredCount} of {totalCount} transactions matching &quot;
+              {query}&quot;
             </span>
           )}
         </div>

@@ -326,7 +326,7 @@ export function TransactionTable({
               No transactions match your search
             </h4>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              We couldn't find any transactions matching "{searchQuery.trim()}".
+              We couldn&apos;t find any transactions matching &quot;{searchQuery.trim()}&quot;.
               Try a different search term or clear your search.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-4">
