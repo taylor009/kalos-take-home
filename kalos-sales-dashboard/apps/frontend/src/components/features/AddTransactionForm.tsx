@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Input } from "@/components/ui";
-import { createTransaction } from "@/lib/api";
+import { useCreateTransactionMutation } from "@/lib/mutations";
 import type { CreateTransactionRequest } from "@shared";
 
 interface AddTransactionFormProps {
@@ -23,7 +22,6 @@ export function AddTransactionForm({
   className,
 }: AddTransactionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const queryClient = useQueryClient();
 
   const {
     register,
@@ -38,16 +36,7 @@ export function AddTransactionForm({
     },
   });
 
-  const createTransactionMutation = useMutation({
-    mutationFn: createTransaction,
-    onSuccess: () => {
-      // Invalidate and refetch transactions and analytics
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
-      reset();
-      onSuccess?.();
-    },
-  });
+  const createTransactionMutation = useCreateTransactionMutation();
 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
@@ -60,6 +49,10 @@ export function AddTransactionForm({
       };
 
       await createTransactionMutation.mutateAsync(transactionData);
+      
+      // Success actions
+      reset();
+      onSuccess?.();
     } catch (error) {
       console.error("Failed to create transaction:", error);
     } finally {

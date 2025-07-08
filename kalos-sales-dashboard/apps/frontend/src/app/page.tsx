@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchTransactions, fetchAnalytics } from "@/lib/api";
-import { queryKeys } from "@/lib/react-query";
+import { queryKeys, queryConfig } from "@/lib/react-query";
 import { AnalyticsDisplay, TransactionTable } from "@/components/features";
 
 export default function DashboardPage() {
@@ -13,6 +13,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: queryKeys.transactions,
     queryFn: fetchTransactions,
+    ...queryConfig.realTime, // Use real-time configuration for live updates
   });
 
   const {
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: queryKeys.analytics,
     queryFn: fetchAnalytics,
+    ...queryConfig.realTime, // Use real-time configuration for live updates
   });
 
     const transactions = transactionsData?.transactions || [];
