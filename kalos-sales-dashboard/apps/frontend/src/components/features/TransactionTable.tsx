@@ -132,7 +132,7 @@ export function TransactionTable({
               No results found
             </h4>
             <p className="text-gray-500">
-              Try adjusting your search to find what you're looking for.
+              Try adjusting your search to find what you&apos;re looking for.
             </p>
           </div>
         ) : (

@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { Toaster } from "react-hot-toast";
 import { Navigation, QuickActions } from "@/components/navigation";
 import { PageErrorBoundary } from "@/components/error-boundary";
+import { ConnectionBadge } from "@/components/websocket";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,12 +39,13 @@ export default function RootLayout({
             <header className="bg-white shadow-sm border-b border-gray-200">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                  <div className="flex items-center">
+                  <div className="flex items-center space-x-4">
                     <h1 className="text-xl font-semibold text-gray-900">
                       📊 Kalos Sales Dashboard
                     </h1>
+                    <ConnectionBadge />
                   </div>
-                  
+
                   {/* Enhanced Navigation */}
                   <div className="flex items-center space-x-6">
                     <Navigation />
@@ -55,33 +57,31 @@ export default function RootLayout({
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <PageErrorBoundary>
-                {children}
-              </PageErrorBoundary>
+              <PageErrorBoundary>{children}</PageErrorBoundary>
             </main>
           </div>
-          
+
           {/* Toast Notifications */}
           <Toaster
             position="top-right"
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#363636',
-                color: '#fff',
+                background: "#363636",
+                color: "#fff",
               },
               success: {
                 duration: 3000,
                 iconTheme: {
-                  primary: '#4ade80',
-                  secondary: '#fff',
+                  primary: "#4ade80",
+                  secondary: "#fff",
                 },
               },
               error: {
                 duration: 5000,
                 iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                  primary: "#ef4444",
+                  secondary: "#fff",
                 },
               },
             }}

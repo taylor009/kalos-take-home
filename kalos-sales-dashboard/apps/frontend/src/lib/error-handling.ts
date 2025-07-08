@@ -103,7 +103,8 @@ export const queryErrorHandler = {
  * Mutation error handler
  */
 export const mutationErrorHandler = {
-  onError: (error: unknown, variables: unknown, context: unknown) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onError: (error: unknown, _variables: unknown, _context: unknown) => {
     handleError(error, "Operation failed");
   },
 };

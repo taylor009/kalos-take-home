@@ -3,7 +3,7 @@ import type {
   CreateTransactionRequest,
   GetTransactionsResponse,
   GetAnalyticsResponse,
-  ApiError,
+  ApiError as ApiErrorResponse,
 } from "@shared";
 
 const API_BASE_URL = "http://localhost:3001";
@@ -40,7 +40,7 @@ async function apiRequest<T>(
     const data = await response.json();
 
     if (!response.ok) {
-      const errorData = data as ApiError;
+      const errorData = data as ApiErrorResponse;
       throw new ApiError(
         response.status,
         errorData.error || "UNKNOWN_ERROR",
