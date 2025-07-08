@@ -1,16 +1,23 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { fetchTransactions, fetchAnalytics } from "@/lib/api";
 import { queryKeys, queryConfig } from "@/lib/react-query";
+import { useWebSocket } from "@/lib/websocket";
 import { AnalyticsDisplay, TransactionTable } from "@/components/features";
 import { SectionErrorBoundary } from "@/components/error-boundary";
 import { AnalyticsGridSkeleton, TableSkeleton } from "@/components/ui";
+import type { GetTransactionsResponse, GetAnalyticsResponse } from "@shared";
 
 // Page metadata would be set if this was a page.tsx with metadata export
 // Since this is a client component, metadata is handled by layout.tsx
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
+  const { onTransactionAdded, onAnalyticsUpdated, isConnected } =
+    useWebSocket();
+
   const {
     data: transactionsData,
     isLoading: transactionsLoading,
@@ -31,7 +38,50 @@ export default function DashboardPage() {
     ...queryConfig.realTime, // Use real-time configuration for live updates
   });
 
-    const transactions = transactionsData?.transactions || [];
+  // Real-time transaction updates
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const unsubscribeTransactions = onTransactionAdded((newTransaction) => {
+      console.log("🔴 Real-time: New transaction received", newTransaction);
+
+      // Update transactions cache
+      queryClient.setQueryData<GetTransactionsResponse>(
+        queryKeys.transactions,
+        (oldData) => {
+          if (!oldData) return oldData;
+
+          // Add new transaction to the beginning of the list
+          const updatedTransactions = [newTransaction, ...oldData.transactions];
+
+          return {
+            transactions: updatedTransactions,
+            total: updatedTransactions.length,
+          };
+        }
+      );
+    });
+
+    return unsubscribeTransactions;
+  }, [isConnected, onTransactionAdded, queryClient]);
+
+  // Real-time analytics updates
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const unsubscribeAnalytics = onAnalyticsUpdated((newAnalytics) => {
+      console.log("📈 Real-time: Analytics updated", newAnalytics);
+
+      // Update analytics cache
+      queryClient.setQueryData<GetAnalyticsResponse>(queryKeys.analytics, {
+        analytics: newAnalytics,
+      });
+    });
+
+    return unsubscribeAnalytics;
+  }, [isConnected, onAnalyticsUpdated, queryClient]);
+
+  const transactions = transactionsData?.transactions || [];
   const analytics = analyticsData?.analytics;
 
   return (
@@ -67,14 +117,17 @@ export default function DashboardPage() {
                   Failed to load analytics
                 </h3>
                 <div className="mt-2 text-sm text-red-700">
-                  <p>Unable to fetch analytics data. Please try refreshing the page.</p>
+                  <p>
+                    Unable to fetch analytics data. Please try refreshing the
+                    page.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <AnalyticsDisplay 
-            analytics={analytics} 
+          <AnalyticsDisplay
+            analytics={analytics}
             isLoading={analyticsLoading}
           />
         )}
@@ -85,7 +138,9 @@ export default function DashboardPage() {
         {transactionsLoading ? (
           <div className="bg-white rounded-lg shadow">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Recent Transactions</h3>
+              <h3 className="text-lg font-medium text-gray-900">
+                Recent Transactions
+              </h3>
             </div>
             <div className="p-6">
               <TableSkeleton rows={5} columns={4} />
@@ -110,14 +165,17 @@ export default function DashboardPage() {
                   Failed to load transactions
                 </h3>
                 <div className="mt-2 text-sm text-red-700">
-                  <p>Unable to fetch transaction data. Please try refreshing the page.</p>
+                  <p>
+                    Unable to fetch transaction data. Please try refreshing the
+                    page.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <TransactionTable 
-            transactions={transactions} 
+          <TransactionTable
+            transactions={transactions}
             isLoading={transactionsLoading}
           />
         )}

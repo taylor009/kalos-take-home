@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import type { Analytics } from "@shared";
+import { cn } from "@/lib/utils";
 
 interface AnalyticsDisplayProps {
   analytics: Analytics | undefined;
@@ -13,9 +15,18 @@ interface StatCardProps {
   value: string;
   icon: React.ReactNode;
   isLoading?: boolean;
+  isUpdated?: boolean;
+  hasIncrease?: boolean;
 }
 
-function StatCard({ title, value, icon, isLoading }: StatCardProps) {
+function StatCard({
+  title,
+  value,
+  icon,
+  isLoading,
+  isUpdated,
+  hasIncrease,
+}: StatCardProps) {
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
@@ -33,16 +44,63 @@ function StatCard({ title, value, icon, isLoading }: StatCardProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div
+      className={cn(
+        "bg-white rounded-lg shadow p-6 transition-all duration-500 ease-in-out",
+        isUpdated &&
+          "ring-2 ring-green-400 ring-opacity-50 bg-green-50 scale-[1.02]",
+        hasIncrease && "bg-gradient-to-br from-green-50 to-white"
+      )}
+    >
       <div className="flex items-center">
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 text-blue-600">{icon}</div>
+          <div
+            className={cn(
+              "w-8 h-8 transition-colors duration-300",
+              isUpdated ? "text-green-600" : "text-blue-600"
+            )}
+          >
+            {icon}
+          </div>
         </div>
         <div className="ml-5 w-0 flex-1">
-          <dt className="text-sm font-medium text-gray-500 truncate">
+          <dt
+            className={cn(
+              "text-sm font-medium truncate transition-colors duration-300",
+              isUpdated ? "text-green-700" : "text-gray-500"
+            )}
+          >
             {title}
+            {isUpdated && (
+              <span className="ml-2 inline-flex items-center">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
+              </span>
+            )}
           </dt>
-          <dd className="text-2xl font-semibold text-gray-900">{value}</dd>
+          <dd
+            className={cn(
+              "text-2xl font-semibold transition-all duration-300",
+              isUpdated ? "text-green-900" : "text-gray-900",
+              hasIncrease && "animate-pulse"
+            )}
+          >
+            {value}
+            {hasIncrease && (
+              <span className="ml-2 inline-flex items-center text-sm font-medium text-green-600">
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </span>
+            )}
+          </dd>
         </div>
       </div>
     </div>
@@ -54,6 +112,61 @@ export function AnalyticsDisplay({
   isLoading,
   className,
 }: AnalyticsDisplayProps) {
+  const [updatedFields, setUpdatedFields] = useState<Set<string>>(new Set());
+  const [revenueIncreased, setRevenueIncreased] = useState(false);
+  const [countIncreased, setCountIncreased] = useState(false);
+  const prevAnalyticsRef = useRef<Analytics | undefined>(undefined);
+
+  // Detect analytics updates and add visual indicators
+  useEffect(() => {
+    const prevAnalytics = prevAnalyticsRef.current;
+
+    if (prevAnalytics && analytics) {
+      const updatedFieldsSet = new Set<string>();
+
+      // Check for revenue changes
+      if (prevAnalytics.totalRevenue !== analytics.totalRevenue) {
+        updatedFieldsSet.add("revenue");
+        setRevenueIncreased(
+          analytics.totalRevenue > prevAnalytics.totalRevenue
+        );
+        console.log("💰 Analytics: Revenue updated", {
+          from: prevAnalytics.totalRevenue,
+          to: analytics.totalRevenue,
+          increased: analytics.totalRevenue > prevAnalytics.totalRevenue,
+        });
+      }
+
+      // Check for transaction count changes
+      if (prevAnalytics.transactionCount !== analytics.transactionCount) {
+        updatedFieldsSet.add("count");
+        setCountIncreased(
+          analytics.transactionCount > prevAnalytics.transactionCount
+        );
+        console.log("📊 Analytics: Transaction count updated", {
+          from: prevAnalytics.transactionCount,
+          to: analytics.transactionCount,
+          increased:
+            analytics.transactionCount > prevAnalytics.transactionCount,
+        });
+      }
+
+      if (updatedFieldsSet.size > 0) {
+        setUpdatedFields(updatedFieldsSet);
+
+        // Clear indicators after animation
+        setTimeout(() => {
+          setUpdatedFields(new Set());
+          setRevenueIncreased(false);
+          setCountIncreased(false);
+        }, 3000);
+      }
+    }
+
+    // Update ref for next comparison
+    prevAnalyticsRef.current = analytics;
+  }, [analytics]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -74,6 +187,8 @@ export function AnalyticsDisplay({
           title="Total Revenue"
           value={isLoading ? "-" : formatCurrency(analytics?.totalRevenue || 0)}
           isLoading={isLoading}
+          isUpdated={updatedFields.has("revenue")}
+          hasIncrease={revenueIncreased}
           icon={
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -92,6 +207,8 @@ export function AnalyticsDisplay({
             isLoading ? "-" : analytics?.transactionCount.toString() || "0"
           }
           isLoading={isLoading}
+          isUpdated={updatedFields.has("count")}
+          hasIncrease={countIncreased}
           icon={
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -108,6 +225,8 @@ export function AnalyticsDisplay({
           title="Average Transaction"
           value={isLoading ? "-" : calculateAverageTransaction()}
           isLoading={isLoading}
+          isUpdated={updatedFields.has("revenue") || updatedFields.has("count")}
+          hasIncrease={revenueIncreased || countIncreased}
           icon={
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

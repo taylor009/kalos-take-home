@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import type { Transaction } from "@shared";
 import {
   Table,
@@ -11,6 +11,7 @@ import {
   TableCell,
 } from "@/components/ui";
 import { SearchBar } from "./SearchBar";
+import { cn } from "@/lib/utils";
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -24,6 +25,59 @@ export function TransactionTable({
   className,
 }: TransactionTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const prevTransactionsRef = useRef<Transaction[]>([]);
+
+  // Detect new transactions and add visual indicators
+  useEffect(() => {
+    const prevTransactions = prevTransactionsRef.current;
+    const prevIds = new Set(prevTransactions.map((t) => t.id));
+
+    // Find newly added transactions
+    const newTransactions = transactions.filter((t) => !prevIds.has(t.id));
+
+    if (newTransactions.length > 0) {
+      console.log(
+        "🎨 Visual indicator: New transactions detected",
+        newTransactions
+      );
+
+      // Add to new transactions set
+      setNewTransactionIds((prev) => {
+        const newSet = new Set(prev);
+        newTransactions.forEach((t) => newSet.add(t.id));
+        return newSet;
+      });
+
+      // Highlight the most recent transaction briefly
+      const mostRecentTransaction = newTransactions[0];
+      if (mostRecentTransaction) {
+        setHighlightedId(mostRecentTransaction.id);
+
+        // Remove highlight after animation
+        setTimeout(() => {
+          setHighlightedId(null);
+        }, 2000);
+
+        // Remove from new transactions set after a delay
+        newTransactions.forEach((t) => {
+          setTimeout(() => {
+            setNewTransactionIds((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(t.id);
+              return newSet;
+            });
+          }, 5000); // Keep the "new" indicator for 5 seconds
+        });
+      }
+    }
+
+    // Update ref for next comparison
+    prevTransactionsRef.current = transactions;
+  }, [transactions]);
 
   // Filter transactions based on search query
   const filteredTransactions = useMemo(() => {
@@ -72,6 +126,12 @@ export function TransactionTable({
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-medium text-gray-900">
               Recent Transactions
+              {newTransactionIds.size > 0 && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 animate-pulse">
+                  <div className="h-1.5 w-1.5 rounded-full bg-green-400 mr-1"></div>
+                  Live
+                </span>
+              )}
             </h3>
             <div className="text-sm text-gray-500">
               {filteredTransactions.length} of {transactions.length}{" "}
@@ -147,26 +207,76 @@ export function TransactionTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>
-                    {new Date(transaction.date).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {transaction.customerName}
-                  </TableCell>
-                  <TableCell>${transaction.amount.toFixed(2)}</TableCell>
-                  <TableCell className="text-gray-500">
-                    {transaction.currency}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredTransactions.map((transaction) => {
+                const isNew = newTransactionIds.has(transaction.id);
+                const isHighlighted = highlightedId === transaction.id;
+
+                return (
+                  <TableRow
+                    key={transaction.id}
+                    className={cn(
+                      "transition-all duration-500 ease-in-out",
+                      isNew && "bg-green-50 border-l-4 border-l-green-400",
+                      isHighlighted && "bg-green-100 scale-[1.02] shadow-md",
+                      !isNew && !isHighlighted && "hover:bg-gray-50"
+                    )}
+                  >
+                    <TableCell className="relative">
+                      {isNew && (
+                        <div className="absolute -left-1 top-1/2 transform -translate-y-1/2">
+                          <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "transition-all duration-300",
+                          isNew && "font-medium text-green-900"
+                        )}
+                      >
+                        {new Date(transaction.date).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "font-medium transition-all duration-300",
+                        isNew && "text-green-900 font-semibold"
+                      )}
+                    >
+                      {transaction.customerName}
+                      {isNew && (
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          New
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "transition-all duration-300",
+                        isNew && "text-green-900 font-semibold"
+                      )}
+                    >
+                      ${transaction.amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-gray-500 transition-all duration-300",
+                        isNew && "text-green-700"
+                      )}
+                    >
+                      {transaction.currency}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
