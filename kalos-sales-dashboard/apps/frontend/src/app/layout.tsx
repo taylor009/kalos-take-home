@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "react-hot-toast";
+import { Navigation, QuickActions } from "@/components/navigation";
+import { PageErrorBoundary } from "@/components/error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,27 +43,21 @@ export default function RootLayout({
                       📊 Kalos Sales Dashboard
                     </h1>
                   </div>
-                  <nav className="flex space-x-8">
-                    <a
-                      href="/"
-                      className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      Dashboard
-                    </a>
-                    <a
-                      href="/add"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                    >
-                      Add Transaction
-                    </a>
-                  </nav>
+                  
+                  {/* Enhanced Navigation */}
+                  <div className="flex items-center space-x-6">
+                    <Navigation />
+                    <QuickActions />
+                  </div>
                 </div>
               </div>
             </header>
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              {children}
+              <PageErrorBoundary>
+                {children}
+              </PageErrorBoundary>
             </main>
           </div>
           

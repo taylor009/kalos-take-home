@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { AddTransactionForm } from "@/components/features";
+import { SectionErrorBoundary } from "@/components/error-boundary";
+import { Breadcrumb } from "@/components/navigation";
+import { FormSkeleton } from "@/components/ui";
+import { Suspense } from "react";
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -15,27 +19,23 @@ export default function AddTransactionPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb 
+        items={[
+          { label: 'Dashboard', href: '/' },
+          { label: 'Add Transaction' }
+        ]} 
+      />
+
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Add New Transaction
-        </h1>
-        <p className="mt-2 text-gray-600">
-          Create a new transaction record for the sales dashboard.
-        </p>
-      </div>
-
-      {/* Add Transaction Form */}
-      <AddTransactionForm onSuccess={handleSuccess} className="max-w-2xl" />
-
-      {/* Back Link */}
-      <div className="max-w-2xl">
-        <a
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={() => router.back()}
+          className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-gray-100"
+          aria-label="Go back"
         >
           <svg
-            className="w-4 h-4 mr-1"
+            className="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -47,9 +47,23 @@ export default function AddTransactionPage() {
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Back to Dashboard
-        </a>
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Add New Transaction
+          </h1>
+          <p className="mt-1 text-gray-600">
+            Create a new transaction record for the sales dashboard.
+          </p>
+        </div>
       </div>
+
+      {/* Add Transaction Form with Error Boundary */}
+      <SectionErrorBoundary>
+        <Suspense fallback={<FormSkeleton />}>
+          <AddTransactionForm onSuccess={handleSuccess} className="max-w-2xl" />
+        </Suspense>
+      </SectionErrorBoundary>
     </div>
   );
 }
