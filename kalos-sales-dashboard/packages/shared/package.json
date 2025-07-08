@@ -1,0 +1,14 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Kalos sales dashboard",
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./types": "./types.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "type": "module"
+}
