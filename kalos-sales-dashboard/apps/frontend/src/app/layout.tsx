@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Toaster } from "react-hot-toast";
-import { Navigation, QuickActions } from "@/components/navigation";
+import { Navigation } from "@/components/navigation";
 import { PageErrorBoundary } from "@/components/error-boundary";
 import { ConnectionBadge } from "@/components/websocket";
 
@@ -91,7 +91,6 @@ export default function RootLayout({
                     </div>
 
                     <Navigation />
-                    <QuickActions />
                   </div>
                 </div>
               </div>
