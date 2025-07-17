@@ -74,12 +74,13 @@ export function WebSocketProvider({
 
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
+  const socketRef = useRef<Socket | null>(null);
 
   /**
    * Connect to WebSocket server
    */
   const connect = useCallback(() => {
-    if (socket?.connected) {
+    if (socketRef.current?.connected) {
       console.log("WebSocket already connected");
       return;
     }
@@ -101,6 +102,7 @@ export function WebSocketProvider({
       setStatus("connected");
       setConnectionTime(new Date());
       setSocket(newSocket);
+      socketRef.current = newSocket;
       reconnectAttemptsRef.current = 0;
       setReconnectCount(0);
 
@@ -144,6 +146,7 @@ export function WebSocketProvider({
       setStatus("disconnected");
       setConnectionTime(null);
       setSocket(null);
+      socketRef.current = null;
 
       // Only attempt reconnection for unexpected disconnections
       if (
@@ -175,7 +178,8 @@ export function WebSocketProvider({
 
     // Set socket reference immediately to prevent multiple connections
     setSocket(newSocket);
-  }, [url, reconnectAttempts, reconnectDelay, socket?.connected]);
+    socketRef.current = newSocket;
+  }, [url, reconnectAttempts, reconnectDelay]);
 
   /**
    * Disconnect from WebSocket server
@@ -187,18 +191,21 @@ export function WebSocketProvider({
       clearTimeout(reconnectTimeoutRef.current);
     }
 
-    if (socket) {
-      socket.emit("client:leave");
-      socket.disconnect();
+    // Use ref to access current socket value to avoid dependency issues
+    const currentSocket = socketRef.current;
+    if (currentSocket) {
+      currentSocket.emit("client:leave");
+      currentSocket.disconnect();
     }
 
     setSocket(null);
+    socketRef.current = null;
     setStatus("disconnected");
     setConnectionTime(null);
     setLastError(null);
     reconnectAttemptsRef.current = 0;
     setReconnectCount(0);
-  }, [socket]);
+  }, []); // No dependencies to avoid circular updates
 
   /**
    * Subscribe to transaction added events
@@ -253,9 +260,21 @@ export function WebSocketProvider({
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      disconnect();
+      // Only disconnect if we have a socket
+      const currentSocket = socketRef.current;
+      if (currentSocket) {
+        currentSocket.emit("client:leave");
+        currentSocket.disconnect();
+      }
+      setSocket(null);
+      socketRef.current = null;
+      setStatus("disconnected");
+      setConnectionTime(null);
+      setLastError(null);
+      reconnectAttemptsRef.current = 0;
+      setReconnectCount(0);
     };
-  }, [autoConnect, connect, disconnect]);
+  }, [autoConnect]); // Only depend on autoConnect
 
   // Context value
   const contextValue: WebSocketContextType = {

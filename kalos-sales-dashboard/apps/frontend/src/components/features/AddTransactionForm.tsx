@@ -431,7 +431,7 @@ export function AddTransactionForm({
                     isDirty ? "bg-blue-500" : "bg-gray-300"
                   )}
                 ></div>
-                <span>Form {isDirty ? &quot;Modified&quot; : &quot;Clean&quot;}</span>
+                <span>Form {isDirty ? "Modified" : "Clean"}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <div
@@ -440,7 +440,7 @@ export function AddTransactionForm({
                     isValid ? "bg-green-500" : "bg-amber-500"
                   )}
                 ></div>
-                <span>Validation {isValid ? &quot;Passed&quot; : &quot;Pending&quot;}</span>
+                <span>Validation {isValid ? "Passed" : "Pending"}</span>
               </div>
             </div>
           </div>

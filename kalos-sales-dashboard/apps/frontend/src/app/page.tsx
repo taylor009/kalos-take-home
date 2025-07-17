@@ -1,14 +1,14 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { fetchTransactions, fetchAnalytics } from "@/lib/api";
 import { queryKeys, queryConfig } from "@/lib/react-query";
 import { useWebSocket } from "@/lib/websocket";
 import { AnalyticsDisplay, TransactionTable } from "@/components/features";
 import { SectionErrorBoundary } from "@/components/error-boundary";
 import { AnalyticsGridSkeleton, TableSkeleton } from "@/components/ui";
-import type { GetTransactionsResponse, GetAnalyticsResponse } from "@shared";
+import type { GetTransactionsResponse, GetAnalyticsResponse, Transaction, Analytics } from "@shared";
 
 // Page metadata would be set if this was a page.tsx with metadata export
 // Since this is a client component, metadata is handled by layout.tsx
@@ -38,48 +38,54 @@ export default function DashboardPage() {
     ...queryConfig.realTime, // Use real-time configuration for live updates
   });
 
+  // Memoize the transaction update callback
+  const handleTransactionAdded = useCallback((newTransaction: Transaction) => {
+    console.log("🔴 Real-time: New transaction received", newTransaction);
+
+    // Update transactions cache
+    queryClient.setQueryData<GetTransactionsResponse>(
+      queryKeys.transactions,
+      (oldData) => {
+        if (!oldData) return oldData;
+
+        // Add new transaction to the beginning of the list
+        const updatedTransactions = [newTransaction, ...oldData.transactions];
+
+        return {
+          transactions: updatedTransactions,
+          total: updatedTransactions.length,
+        };
+      }
+    );
+  }, [queryClient]);
+
+  // Memoize the analytics update callback
+  const handleAnalyticsUpdated = useCallback((newAnalytics: Analytics) => {
+    console.log("📈 Real-time: Analytics updated", newAnalytics);
+
+    // Update analytics cache
+    queryClient.setQueryData<GetAnalyticsResponse>(queryKeys.analytics, {
+      analytics: newAnalytics,
+    });
+  }, [queryClient]);
+
   // Real-time transaction updates
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribeTransactions = onTransactionAdded((newTransaction) => {
-      console.log("🔴 Real-time: New transaction received", newTransaction);
-
-      // Update transactions cache
-      queryClient.setQueryData<GetTransactionsResponse>(
-        queryKeys.transactions,
-        (oldData) => {
-          if (!oldData) return oldData;
-
-          // Add new transaction to the beginning of the list
-          const updatedTransactions = [newTransaction, ...oldData.transactions];
-
-          return {
-            transactions: updatedTransactions,
-            total: updatedTransactions.length,
-          };
-        }
-      );
-    });
+    const unsubscribeTransactions = onTransactionAdded(handleTransactionAdded);
 
     return unsubscribeTransactions;
-  }, [isConnected, onTransactionAdded, queryClient]);
+  }, [isConnected, onTransactionAdded, handleTransactionAdded]);
 
   // Real-time analytics updates
   useEffect(() => {
     if (!isConnected) return;
 
-    const unsubscribeAnalytics = onAnalyticsUpdated((newAnalytics) => {
-      console.log("📈 Real-time: Analytics updated", newAnalytics);
-
-      // Update analytics cache
-      queryClient.setQueryData<GetAnalyticsResponse>(queryKeys.analytics, {
-        analytics: newAnalytics,
-      });
-    });
+    const unsubscribeAnalytics = onAnalyticsUpdated(handleAnalyticsUpdated);
 
     return unsubscribeAnalytics;
-  }, [isConnected, onAnalyticsUpdated, queryClient]);
+  }, [isConnected, onAnalyticsUpdated, handleAnalyticsUpdated]);
 
   const transactions = transactionsData?.transactions || [];
   const analytics = analyticsData?.analytics;

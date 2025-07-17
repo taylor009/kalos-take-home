@@ -213,7 +213,7 @@ export function AnalyticsDisplay({
           from: prevAnalytics.totalRevenue,
           to: analytics.totalRevenue,
           increased,
-          trend: revenueTrend,
+          change: ((analytics.totalRevenue - prevAnalytics.totalRevenue) / prevAnalytics.totalRevenue) * 100,
         });
       }
 
@@ -237,7 +237,7 @@ export function AnalyticsDisplay({
           from: prevAnalytics.transactionCount,
           to: analytics.transactionCount,
           increased,
-          trend: countTrend,
+          change: ((analytics.transactionCount - prevAnalytics.transactionCount) / prevAnalytics.transactionCount) * 100,
         });
       }
 
@@ -257,7 +257,7 @@ export function AnalyticsDisplay({
 
     // Update ref for next comparison
     prevAnalyticsRef.current = analytics;
-  }, [analytics, revenueTrend, countTrend]);
+  }, [analytics]); // Removed revenueTrend and countTrend from dependencies
 
   const calculateAverageTransaction = (): string => {
     if (!analytics || analytics.transactionCount === 0)
